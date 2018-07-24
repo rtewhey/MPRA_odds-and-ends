@@ -228,6 +228,7 @@ my $g_ct;
 my $t_ct;
 my $gc;
 my $tmp_seq;
+my $tmp_allele;
 
 my $tmp_rs;
 my @tmp_l_flank;
@@ -326,18 +327,22 @@ while ( my $seq = $in->next_seq() )
     		my $list_ofAlts="-";
     		$list_ofAlts=join(",",@flanking_rs) if(scalar(@flanking_rs) >= 1);
     		
+    		$tmp_allele = $allele_A{$chr}{$rs} if($change_middle == 0);
+			$tmp_allele = $allele_B{$chr}{$rs} if($change_middle == 1);	
     		
     		if($pos_strand{$rs} == 1)
 				{
 				$tmp_seq = $l_seq_updated.$alleleToPrint.$r_seq_updated;
 				
+
+
 				$a_ct=0;$c_ct=0;$g_ct=0;$t_ct=0;
 				$a_ct = uc($tmp_seq) =~ tr/A//;
 				$c_ct = uc($tmp_seq) =~ tr/C//;
 				$g_ct = uc($tmp_seq) =~ tr/G//;
 				$t_ct = uc($tmp_seq) =~ tr/T//;
 				$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));	
-				print  join("\t",$id,$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_A{$chr}{$rs}); 
+				print  join("\t",$id,$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$tmp_allele); 
 				print  "\t",$l_seq_updated,"\t",$alleleToPrint,"\t",$r_seq_updated;
 				print  "\t",$l_seq_updated,$alleleToPrint,$r_seq_updated,"\t",$list_ofAlts,"\n";	
 				}
@@ -355,7 +360,7 @@ while ( my $seq = $in->next_seq() )
 				$g_ct = uc($tmp_seq) =~ tr/G//;
 				$t_ct = uc($tmp_seq) =~ tr/T//;
 				$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));	
-				print  join("\t",$id."_RC",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_B{$chr}{$rs}); 
+				print  join("\t",$id."_RC",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$tmp_allele); 
 				print  "\t",$tmp_rev_3,"\t",$tmp_rev_allele,"\t",$tmp_rev_5;
 				print  "\t",$tmp_rev_3,$tmp_rev_allele,$tmp_rev_5,"\t",$list_ofAlts,"\n";
 				}
