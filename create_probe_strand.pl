@@ -9,15 +9,36 @@ use strict;
 use warnings;
 use Bio::SeqIO;
 use POSIX;
- 
+use Getopt::Std;
+
+my %options=();
+getopts('L:R:O:P:', \%options);
+
+#####
+#
+#-L = Length of left arm
+#-R = Length of right arm
+#-O = Total oligo length
+#-P = Prefix to attach to ID
+#
+#####
+if(exists($options{L}) && exists($options{R})){die "Set length to equal left and right (-O)\n" unless($options{O}==($options{L}+$options{R}));}
+
 my $REF = $ARGV[0];
 my $ALLELES = $ARGV[1];
 
+my $ID_prefix = $options{P} || "";
+
 #######
 ## Global parameters
-my $oligo_length = 150; #Length of cloned enhancer region
-my $max_indel = 35; #Max length of variant 
+my $oligo_length = $options{O} || 200; #Length of cloned enhancer region
+my $max_indel = 35; #Max length of variant
 
+my $left_length = $options{L} || $oligo_length/2;
+my $right_length = $options{R} || $oligo_length/2;
+
+
+print STDERR "\nRef:$REF\nAllele File: $ALLELES\n\nOligo Length: $oligo_length\nLeft Length: $left_length\nRight Length: $right_length\n\n";
 #######
 
 
@@ -72,11 +93,11 @@ foreach $chr (keys %allele_A)
 		$adjacent_ct{$rs} = 1;
 		foreach $rs_2 (keys %{$allele_A{$chr}})
 		{
-			if($pos{$rs_2} <= ($pos{$rs}+($oligo_length/2)) && $pos{$rs_2} >= ($pos{$rs}-($oligo_length/2)) && $rs ne $rs_2 && $chr{$rs} eq $chr{$rs_2})
+			if($pos{$rs_2} <= ($pos{$rs}+($right_length)) && $pos{$rs_2} >= ($pos{$rs}-($left_length)) && $rs ne $rs_2 && $chr{$rs} eq $chr{$rs_2})
 			{
 				if(($pos{$rs_2} <= $pos{$rs} && $end_pos{$rs_2} >= $pos{$rs}) || ($pos{$rs} <= $pos{$rs_2} && $end_pos{$rs} >= $pos{$rs_2}))
 				{
-					#print STDERR "!!Overlapping Sites!!\t$rs\t$pos{$rs}\t$rs_2\t$pos{$rs_2}\n"
+					print STDERR "!!Overlapping Sites!!\t$rs\t$pos{$rs}\t$rs_2\t$pos{$rs_2}\n"
 				}
 				else
 				{
@@ -97,7 +118,7 @@ foreach $rs (keys %adjacent_ct)
 
 print STDERR "\n\n######\n\nMulti allelelic probes\n";
 my $key;
-for $key ( sort {$a<=>$b} keys %tmp_ct) 
+for $key ( sort {$a<=>$b} keys %tmp_ct)
 {
 	print STDERR "($key)->($tmp_ct{$key})\n";
 }
@@ -112,7 +133,7 @@ my $oligo_allele;
 my $oligo_right;
 
 
-my $l_start; 
+my $l_start;
 my $l_stop;
 my $r_start;
 my $r_stop;
@@ -145,13 +166,13 @@ my $tmp_rev_allele;
 print STDERR "\n\n######\n\nLoading genome\n";
 my $in  = Bio::SeqIO->new(-file => $REF , '-format' => 'Fasta');
 
-while ( my $seq = $in->next_seq() ) 
+while ( my $seq = $in->next_seq() )
 {
     print STDERR "Chromosome: ",$seq->id," length ",$seq->length(),"\n";
     $chr = $seq->id;
     $count = keys %{$allele_A{$chr}};
     print STDERR "\t$count Enhancer oligos to build\n";
-    
+
     foreach $rs (keys %{$allele_A{$chr}})
     {
 			$spacer_R = "";
@@ -160,18 +181,18 @@ while ( my $seq = $in->next_seq() )
 			$length = $length+(length($allele_B{$chr}{$rs})-length($allele_A{$chr}{$rs})) if(length($allele_B{$chr}{$rs}) > length($allele_A{$chr}{$rs}));  ##Adjust for insertions
 			$spacer_R = '-' x (length($allele_B{$chr}{$rs})-length($allele_A{$chr}{$rs})) if(length($allele_B{$chr}{$rs}) > length($allele_A{$chr}{$rs}));
 			$spacer_A = '-' x (length($allele_A{$chr}{$rs})-length($allele_B{$chr}{$rs})) if(length($allele_A{$chr}{$rs}) > length($allele_B{$chr}{$rs}));
-			
+
 			print STDERR "Skipping $rs for being too large - $length\n" if($max_indel <= $length);
 			next if($max_indel <= $length);
-		
-			$l_start = $pos{$rs}-(floor(($oligo_length-$length)/2));
+
+			$l_start = $pos{$rs}-(floor($left_length-($length/2)));
 			$l_stop = $pos{$rs}-1;
-			$r_stop = $end_pos{$rs}+(ceil(($oligo_length-$length)/2));
+			$r_stop = $end_pos{$rs}+(ceil($right_length-($length/2)));
 			$r_start = $end_pos{$rs}+1;
 
 			my $l_seq = $seq->subseq($l_start,$l_stop);
 			my $r_seq = $seq->subseq($r_start,$r_stop);
-			
+
 				if($pos_strand{$rs} == 1)
 					{
 					$tmp_seq = $l_seq.$seq->subseq($pos{$rs},$end_pos{$rs}).$r_seq;
@@ -180,24 +201,24 @@ while ( my $seq = $in->next_seq() )
 					$c_ct = uc($tmp_seq) =~ tr/C//;
 					$g_ct = uc($tmp_seq) =~ tr/G//;
 					$t_ct = uc($tmp_seq) =~ tr/T//;
-					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));	
-					print  join("\t",$rs."_A",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_A{$chr}{$rs}); 
+					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));
+					print  join("\t",$rs."_".$ID_prefix."_A",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_A{$chr}{$rs});
 					print  "\t",$l_seq,"\t",$seq->subseq($pos{$rs},$end_pos{$rs}),"$spacer_R\t",$r_seq;
-					print  "\t",$l_seq,$seq->subseq($pos{$rs},$end_pos{$rs}),$r_seq,"\n";	
-					
-					
+					print  "\t",$l_seq,$seq->subseq($pos{$rs},$end_pos{$rs}),$r_seq,"\n";
+
+
 					$tmp_seq = $l_seq.$allele_B{$chr}{$rs}.$r_seq;
 					$a_ct=0;$c_ct=0;$g_ct=0;$t_ct=0;
 					$a_ct = uc($tmp_seq) =~ tr/A//;
 					$c_ct = uc($tmp_seq) =~ tr/C//;
 					$g_ct = uc($tmp_seq) =~ tr/G//;
 					$t_ct = uc($tmp_seq) =~ tr/T//;
-					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));	
-					print  join("\t",$rs."_B",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_B{$chr}{$rs}); 
+					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));
+					print  join("\t",$rs."_".$ID_prefix."_B",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_B{$chr}{$rs});
 					print  "\t",$l_seq,"\t",$allele_B{$chr}{$rs},"$spacer_R\t",$r_seq;
 					print  "\t",$l_seq,$allele_B{$chr}{$rs},$r_seq,"\n";
 					}
-		
+
 				if($neg_strand{$rs} == 1)
 					{
 					$tmp_seq = $l_seq.$seq->subseq($pos{$rs},$end_pos{$rs}).$r_seq;
@@ -206,37 +227,37 @@ while ( my $seq = $in->next_seq() )
 					$c_ct = uc($tmp_seq) =~ tr/C//;
 					$g_ct = uc($tmp_seq) =~ tr/G//;
 					$t_ct = uc($tmp_seq) =~ tr/T//;
-					
+
 					$tmp_rev_5 = reverse_complement_IUPAC($l_seq);
 					$tmp_rev_allele = reverse_complement_IUPAC($seq->subseq($pos{$rs},$end_pos{$rs}));
 					$tmp_rev_3 = reverse_complement_IUPAC($r_seq);
 
-					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));	
-					print  join("\t",$rs."_RC_A",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_A{$chr}{$rs}); 
+					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));
+					print  join("\t",$rs."_".$ID_prefix."_RC_A",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_A{$chr}{$rs});
 					print  "\t",$tmp_rev_3,"\t",$tmp_rev_allele,"$spacer_R\t",$tmp_rev_5;
-					print  "\t",$tmp_rev_3,$tmp_rev_allele,$tmp_rev_5,"\n";	
-					
-					
+					print  "\t",$tmp_rev_3,$tmp_rev_allele,$tmp_rev_5,"\n";
+
+
 					$tmp_seq = $l_seq.$allele_B{$chr}{$rs}.$r_seq;
 					$a_ct=0;$c_ct=0;$g_ct=0;$t_ct=0;
 					$a_ct = uc($tmp_seq) =~ tr/A//;
 					$c_ct = uc($tmp_seq) =~ tr/C//;
 					$g_ct = uc($tmp_seq) =~ tr/G//;
 					$t_ct = uc($tmp_seq) =~ tr/T//;
-					
+
 					$tmp_rev_5 = reverse_complement_IUPAC($l_seq);
 					$tmp_rev_allele = reverse_complement_IUPAC($allele_B{$chr}{$rs});
 					$tmp_rev_3 = reverse_complement_IUPAC($r_seq);
-					
-					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));	
-					print  join("\t",$rs."_RC_B",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_B{$chr}{$rs}); 
+
+					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));
+					print  join("\t",$rs."_".$ID_prefix."_RC_B",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_B{$chr}{$rs});
 					print  "\t",$tmp_rev_3,"\t",$tmp_rev_allele,"$spacer_R\t",$tmp_rev_5;
 					print  "\t",$tmp_rev_3,$tmp_rev_allele,$tmp_rev_5,"\n";
-					
+
 					}
 			#print STDERR "\t\t",$l_seq," ",$allele_B{$chr}{$rs},"$spacer_A ",$r_seq,"\n";
 
-			die "Non matching alleles\n$rs\t$seq->subseq($pos{$rs},$end_pos{$rs})\t$allele_A{$chr}{$rs} " if($seq->subseq($pos{$rs},$end_pos{$rs}) ne $allele_A{$chr}{$rs});
+			die "##Non matching alleles\n$rs\t$seq->subseq($pos{$rs},$end_pos{$rs})\t$allele_A{$chr}{$rs} " if($seq->subseq($pos{$rs},$end_pos{$rs}) ne $allele_A{$chr}{$rs});
 
 		##Build Alt haplotype
 		if($adjacent_ct{$rs} > 1)
@@ -248,7 +269,7 @@ while ( my $seq = $in->next_seq() )
 
 			foreach $tmp_rs (@{$adjacent{$rs}})
 			{
-				
+
 				if(length($allele_A{$chr}{$tmp_rs})==1 && length($allele_B{$chr}{$tmp_rs})==1)
 				{
 					push(@alt_rs,$tmp_rs);
@@ -262,18 +283,18 @@ while ( my $seq = $in->next_seq() )
 					{
 						$tmp_array_pos = $pos{$tmp_rs}-$r_start;
 						die "Non matching alleles during alt haplotype reconstruction\n$rs adding $tmp_rs - $tmp_r_flank[$tmp_array_pos] - $allele_A{$chr}{$tmp_rs} \n " if($tmp_r_flank[$tmp_array_pos] ne $allele_A{$chr}{$tmp_rs});
-						$tmp_r_flank[$tmp_array_pos] = $allele_B{$chr}{$tmp_rs}	;					
-					}			
+						$tmp_r_flank[$tmp_array_pos] = $allele_B{$chr}{$tmp_rs}	;
+					}
 				}
 			}
-			
+
 			##Print Alt haplotype enhancer oligos
 			if(scalar(@alt_rs) >= 1)
 			{
 				$alt_l_seq = join('',@tmp_l_flank);
 				$alt_r_seq = join('',@tmp_r_flank);
-				
-				
+
+
 				if($pos_strand{$rs} == 1)
 					{
 					$tmp_seq = $alt_l_seq.$seq->subseq($pos{$rs},$end_pos{$rs}).$alt_r_seq;
@@ -282,63 +303,63 @@ while ( my $seq = $in->next_seq() )
 					$c_ct = uc($tmp_seq) =~ tr/C//;
 					$g_ct = uc($tmp_seq) =~ tr/G//;
 					$t_ct = uc($tmp_seq) =~ tr/T//;
-					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));	
-					print  join("\t",$rs."_altA",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_A{$chr}{$rs}); 
+					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));
+					print  join("\t",$rs."_".$ID_prefix."_altA",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_A{$chr}{$rs});
 					print  "\t",$alt_l_seq,"\t",$seq->subseq($pos{$rs},$end_pos{$rs}),"$spacer_R\t",$alt_r_seq;
 					print  "\t",$alt_l_seq,$seq->subseq($pos{$rs},$end_pos{$rs}),$alt_r_seq,"\t";
 					print  join (",",@alt_rs)."\n";
-					
+
 					$tmp_seq = $alt_l_seq.$allele_B{$chr}{$rs}.$alt_r_seq;
 					$a_ct=0;$c_ct=0;$g_ct=0;$t_ct=0;
 					$a_ct = uc($tmp_seq) =~ tr/A//;
 					$c_ct = uc($tmp_seq) =~ tr/C//;
 					$g_ct = uc($tmp_seq) =~ tr/G//;
 					$t_ct = uc($tmp_seq) =~ tr/T//;
-					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));	
-					print  join("\t",$rs."_altB",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_B{$chr}{$rs}); 
+					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));
+					print  join("\t",$rs."_".$ID_prefix."_altB",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_B{$chr}{$rs});
 					print  "\t",$alt_l_seq,"\t",$allele_B{$chr}{$rs},"$spacer_R\t",$alt_r_seq;
 					print  "\t",$alt_l_seq,$allele_B{$chr}{$rs},$alt_r_seq,"\t";
 					print  join (",",@alt_rs)."\n";
 					}
 				if($neg_strand{$rs} == 1)
-					{				
+					{
 					$tmp_seq = $alt_l_seq.$seq->subseq($pos{$rs},$end_pos{$rs}).$alt_r_seq;
 					$a_ct=0;$c_ct=0;$g_ct=0;$t_ct=0;
 					$a_ct = uc($tmp_seq) =~ tr/A//;
 					$c_ct = uc($tmp_seq) =~ tr/C//;
 					$g_ct = uc($tmp_seq) =~ tr/G//;
 					$t_ct = uc($tmp_seq) =~ tr/T//;
-					
+
 					$tmp_rev_5 = reverse_complement_IUPAC($alt_l_seq);
 					$tmp_rev_allele = reverse_complement_IUPAC($seq->subseq($pos{$rs},$end_pos{$rs}));
 					$tmp_rev_3 = reverse_complement_IUPAC($alt_r_seq);
-					
-					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));	
-					print  join("\t",$rs."_RC_altA",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_A{$chr}{$rs}); 
+
+					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));
+					print  join("\t",$rs."_".$ID_prefix."_RC_altA",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_A{$chr}{$rs});
 					print  "\t",$tmp_rev_3,"\t",$tmp_rev_allele,"$spacer_R\t",$tmp_rev_5;
 					print  "\t",$tmp_rev_3,$tmp_rev_allele,$tmp_rev_5,"\t";
 					print  join (",",@alt_rs)."\n";
-					
+
 					$tmp_seq = $alt_l_seq.$allele_B{$chr}{$rs}.$alt_r_seq;
 					$a_ct=0;$c_ct=0;$g_ct=0;$t_ct=0;
 					$a_ct = uc($tmp_seq) =~ tr/A//;
 					$c_ct = uc($tmp_seq) =~ tr/C//;
 					$g_ct = uc($tmp_seq) =~ tr/G//;
 					$t_ct = uc($tmp_seq) =~ tr/T//;
-					
+
 					$tmp_rev_5 = reverse_complement_IUPAC($alt_l_seq);
 					$tmp_rev_allele = reverse_complement_IUPAC($allele_B{$chr}{$rs});
 					$tmp_rev_3 = reverse_complement_IUPAC($alt_r_seq);
-					
-					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));	
-					print  join("\t",$rs."_RC_altB",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_B{$chr}{$rs}); 
+
+					$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));
+					print  join("\t",$rs."_".$ID_prefix."_RC_altB",$rs,$chr{$rs},$pos{$rs},$gc,length($tmp_seq),$length,$allele_A{$chr}{$rs},$allele_B{$chr}{$rs},$allele_B{$chr}{$rs});
 					print  "\t",$tmp_rev_3,"\t",$tmp_rev_allele,"$spacer_R\t",$tmp_rev_5;
 					print  "\t",$tmp_rev_3,$tmp_rev_allele,$tmp_rev_5,"\t";
 					print  join (",",@alt_rs)."\n";
 					}
 				}
-					
-		}    
+
+		}
     }
 }
 
@@ -355,4 +376,3 @@ sub reverse_complement_IUPAC {
         $revcomp =~ tr/ABCDGHMNRSTUVWXYabcdghmnrstuvwxy/TVGHCDKNYSAABWXRtvghcdknysaabwxr/;
         return $revcomp;
 }
-
