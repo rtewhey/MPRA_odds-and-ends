@@ -3,7 +3,6 @@
 #
 ###########
 # Build Probes and introduce alleles
-# renamed to Add_adapters.pl from Add_adapters2.pl
 ###########
 
 use strict;
@@ -14,7 +13,7 @@ my $ALLELES = $ARGV[0];
 
 #######
 ## Global parameters
-my $oligo_length = 180; #Length of cloned enhancer region 
+my $oligo_length = 230; #Length of cloned enhancer region 
 
 
 my $l_adapter = "ACTGGCCGCTTGACG";
