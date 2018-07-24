@@ -29,6 +29,8 @@ getopts('L:R:O:P:', \%options);
 #####
 if(exists($options{L}) && exists($options{R})){die "Set length to equal left and right (-O)\n" unless($options{O}==($options{L}+$options{R}));}
 
+my $ID_prefix = $options{P} || "";
+
 my $REF = $ARGV[0];
 my $ALLELES = $ARGV[1];
 
@@ -289,8 +291,8 @@ while ( my $seq = $in->next_seq() )
     		$l_seq_updated = introduceMutations($chr,$l_start,$l_stop,$l_seq,@flanking_rs);
     		$r_seq_updated = introduceMutations($chr,$r_start,$r_stop,$r_seq,@flanking_rs); 	
     		
-    		$l_seq_updated=substr($l_seq_updated, -(floor($left_length-($length/2)));
-    		$r_seq_updated=substr($r_seq_updated, -(ceil($right_length-($length/2)));
+    		$l_seq_updated=substr($l_seq_updated, -(floor($left_length-($length/2))));
+    		$r_seq_updated=substr($r_seq_updated, -(ceil($right_length-($length/2))));
 
 
     		my $alleleToPrint = "";
