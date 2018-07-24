@@ -9,20 +9,38 @@ use strict;
 use warnings;
 use Bio::SeqIO;
 use POSIX;
+use Getopt::Std;
 
 sub reverse_complement_IUPAC;
 sub combinations;
 sub checkOligoOverlap;
 sub checkSNPOverlap;
 
+my %options=();
+getopts('L:R:O:P:', \%options);
+
+#####
+#
+#-L = Length of left arm
+#-R = Length of right arm
+#-O = Total oligo length
+#-P = Prefix to attach to ID
+#
+#####
+if(exists($options{L}) && exists($options{R})){die "Set length to equal left and right (-O)\n" unless($options{O}==($options{L}+$options{R}));}
+
 my $REF = $ARGV[0];
 my $ALLELES = $ARGV[1];
 
 #######
 ## Global parameters
-my $oligo_length = 200; #Length of cloned enhancer region
+my $oligo_length = $options{O} || 200; #Length of cloned enhancer region
 my $max_indel = 50; #Max length of variant 
 
+my $left_length = $options{L} || $oligo_length/2;
+my $right_length = $options{R} || $oligo_length/2;
+
+print STDERR "\nRef:$REF\nAllele File: $ALLELES\n\nOligo Length: $oligo_length\nLeft Length: $left_length\nRight Length: $right_length\n\n";
 #######
 
 
@@ -248,9 +266,9 @@ while ( my $seq = $in->next_seq() )
 			print STDERR "Skipping $rs for being too large - $length\n" if($max_indel <= $length);
 			next if($max_indel <= $length);
     		
-			$l_start = $pos{$rs}-(floor(($oligo_length-$length)/2));
+			$l_start = $pos{$rs}-(floor($left_length-($length/2)));
 			$l_stop = $pos{$rs}-1;
-			$r_stop = $end_pos{$rs}+(ceil(($oligo_length-$length)/2));
+			$r_stop = $end_pos{$rs}+(ceil($right_length-($length/2)));
 			$r_start = $end_pos{$rs}+1;
     	
 			my $l_seq = $seq->subseq($l_start,$l_stop);
@@ -271,8 +289,8 @@ while ( my $seq = $in->next_seq() )
     		$l_seq_updated = introduceMutations($chr,$l_start,$l_stop,$l_seq,@flanking_rs);
     		$r_seq_updated = introduceMutations($chr,$r_start,$r_stop,$r_seq,@flanking_rs); 	
     		
-    		$l_seq_updated=substr($l_seq_updated, -(floor(($oligo_length-$length)/2)));
-    		$r_seq_updated=substr($r_seq_updated, -(ceil(($oligo_length-$length)/2)));
+    		$l_seq_updated=substr($l_seq_updated, -(floor($left_length-($length/2)));
+    		$r_seq_updated=substr($r_seq_updated, -(ceil($right_length-($length/2)));
 
 
     		my $alleleToPrint = "";
@@ -294,13 +312,13 @@ while ( my $seq = $in->next_seq() )
     				$combo_id_ct=$adjacent_sort_key{$rs}{$tmp_comb_id};
     				$combinations_ct{$rs}++;
     				}
-    			$id = $rs."_A_alt-".$combo_id_ct if($change_middle == 0);
-    			$id = $rs."_B_alt-".$combo_id_ct if($change_middle == 1);	
+    			$id = $rs."_A_alt-".$combo_id_ct."_".$ID_prefix if($change_middle == 0);
+    			$id = $rs."_B_alt-".$combo_id_ct."_".$ID_prefix if($change_middle == 1);	
     			}
     		else
     			{
-    			$id = $rs."_A" if($change_middle == 0);
-    			$id = $rs."_B" if($change_middle == 1);
+    			$id = $rs."_A_".$ID_prefix if($change_middle == 0);
+    			$id = $rs."_B_".$ID_prefix if($change_middle == 1);
     			}
     		
     		my $list_ofAlts="-";
@@ -426,7 +444,7 @@ sub checkOligoOverlap (@) {
 	my $overlap = 0;
 	my $rs_1 = $_[0];
 	my $rs_2 = $_[1];
-	if($pos{$rs_2} <= (floor(($pos{$rs_1}+$end_pos{$rs_1})*0.5)+($oligo_length/2)) && $pos{$rs_2} >= (floor(($pos{$rs_1}+$end_pos{$rs_1})*0.5)-($oligo_length/2)) && $end_pos{$rs_2} <= (floor(($pos{$rs_1}+$end_pos{$rs_1})*0.5)+($oligo_length/2)) && $end_pos{$rs_2} >= (floor(($pos{$rs_1}+$end_pos{$rs_1})*0.5)-($oligo_length/2))  && $rs_1 ne $rs_2 && $chr{$rs_1} eq $chr{$rs_2})
+	if($pos{$rs_2} <= (floor(($pos{$rs_1}+$end_pos{$rs_1})*0.5)+($right_length)) && $pos{$rs_2} >= (floor(($pos{$rs_1}+$end_pos{$rs_1})*0.5)-($left_length)) && $end_pos{$rs_2} <= (floor(($pos{$rs_1}+$end_pos{$rs_1})*0.5)+($right_length)) && $end_pos{$rs_2} >= (floor(($pos{$rs_1}+$end_pos{$rs_1})*0.5)-($left_length))  && $rs_1 ne $rs_2 && $chr{$rs_1} eq $chr{$rs_2})
 			{
 			$overlap=1
 			#print STDERR "Two Oligos\t$rs_1\t$pos{$rs_1}\t$rs_2\t$pos{$rs_2}\n"
