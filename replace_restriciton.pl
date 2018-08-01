@@ -44,7 +44,7 @@ while (<ALLELES>)
 		$count++ while $inline[7] =~ /$search/g;
 		print STDERR "Adjusted $inline[0] - $count hits\n";
 		
-		$length = $inline[7];
+		$length = length($inline[7]);
 		
 		#$left = substr($inline[10],-(length($search)-1));
 		#$right = substr($inline[12],0,(length($search)-1));
@@ -54,6 +54,7 @@ while (<ALLELES>)
 		
 		for($i=0;$i<scalar(@loc);$i++)
 			{
+			print STDERR "$loc[$i][0]\t $loc[$i][1]\n";
 			if($loc[$i][0] <= ($length/2)+1 && $loc[$i][1] >= ($length/2)-1    )
 				{
 				print STDERR "WARNING: Restriction site appears to fall over middle of oligo! - $inline[0]\n";
@@ -73,7 +74,7 @@ sub all_match_positions {
     my ($regex, $string) = @_;
     my @ret;
     while ($string =~ /($regex)/g) {
-        push @ret, [pos($string), pos($string) + length $1];
+        push @ret, [pos($string)-length $1, pos($string)];
     }
     return(@ret);
     }
