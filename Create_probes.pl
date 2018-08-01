@@ -64,7 +64,7 @@ my %neg_strand;
 open (ALLELES, $ALLELES) or die "couldn't open $ALLELES\n";
 while (<ALLELES>)
 {
-	next if($_ =~ m/^#/);
+	next if($_ =~ m/^#/ || $_ =~ m/^Chr/ || $_ =~ m/^chr/);
     $_ =~ s/[\n\r]//g;
     @inline = split(/\t/);
     print STDERR "Skipping $inline[2] for being too large - ".length($inline[3])." - ".length($inline[4])."\n"  if($max_indel <= length($inline[3]) || $max_indel <= length($inline[4]));
