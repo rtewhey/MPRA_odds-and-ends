@@ -8,6 +8,8 @@
 use strict;
 use warnings;
 
+sub all_match_positions;
+
 my $ALLELES = $ARGV[0];
 
 
@@ -24,34 +26,54 @@ my $count;
 my $variant;
 my $left;
 my $right;
+my @loc;
+my $length;
 
+my $i;
 
 open (ALLELES, $ALLELES) or die "couldn't open $ALLELES\n";
 while (<ALLELES>)
 {
     $_ =~ s/[\n\r]//g;
     @inline = split(/\t/);
-	if ($inline[13] =~ /$search/)
+   	#if ($inline[13] =~ /$search/)
+	
+	if ($inline[7] =~ /$search/)
 	{
 		$count = 0;
-		$count++ while $inline[13] =~ /$search/g;
+		$count++ while $inline[7] =~ /$search/g;
 		print STDERR "Adjusted $inline[0] - $count hits\n";
 		
-		$left = substr($inline[10],-(length($search)-1));
-		$right = substr($inline[12],0,(length($search)-1));
-		$variant = $left.$inline[11].$right;
+		$length = $inline[7];
 		
-		if($variant =~ /$search/)
+		#$left = substr($inline[10],-(length($search)-1));
+		#$right = substr($inline[12],0,(length($search)-1));
+		#$variant = $left.$inline[11].$right;
+		
+		@loc = all_match_positions($search, $inline[7]);
+		
+		for($i=0;$i<scalar(@loc);$i++)
 			{
-			print STDERR "WARNING: Restriction site appears to fall over variant! - $inline[0]\n";
+			if($loc[$i][0] <= ($length/2)+1 && $loc[$i][1] >= ($length/2)-1    )
+				{
+				print STDERR "WARNING: Restriction site appears to fall over middle of oligo! - $inline[0]\n";
+				}
 			}
-		
-		$inline[10] =~ s/$search/$replace/g;
-		$inline[12] =~ s/$search/$replace/g;
-		$inline[13] =~ s/$search/$replace/g;
+		$inline[7] =~ s/$search/$replace/g;
 	}
 	
 print join("\t",@inline)."\n";			
 }
 
 close ALLELES;
+
+
+
+sub all_match_positions {
+    my ($regex, $string) = @_;
+    my @ret;
+    while ($string =~ /($regex)/g) {
+        push @ret, [pos($string), pos($string) + length $1];
+    }
+    return(@ret);
+    }
