@@ -315,13 +315,17 @@ while ( my $seq = $in->next_seq() )
     				$combo_id_ct=$adjacent_sort_key{$rs}{$tmp_comb_id};
     				$combinations_ct{$rs}++;
     				}
-    			$id = $rs."_A_alt-".$combo_id_ct."_".$ID_prefix if($change_middle == 0);
-    			$id = $rs."_B_alt-".$combo_id_ct."_".$ID_prefix if($change_middle == 1);	
+    			if($change_middle == 0 && $ID_prefix ne "") {$id = $rs."_A_alt-".$combo_id_ct."_".$ID_prefix;} 
+    			if($change_middle == 0 && $ID_prefix eq "") {$id = $rs."_A_alt-".$combo_id_ct;}
+    			if($change_middle == 1 && $ID_prefix ne "") {$id = $rs."_B_alt-".$combo_id_ct."_".$ID_prefix;}
+    			if($change_middle == 1 && $ID_prefix eq "")  {$id = $rs."_B_alt-".$combo_id_ct;}
     			}
     		else
     			{
-    			$id = $rs."_A_".$ID_prefix if($change_middle == 0);
-    			$id = $rs."_B_".$ID_prefix if($change_middle == 1);
+    			if($change_middle == 0 && $ID_prefix ne "") {$id = $rs."_A_".$ID_prefix;} 
+    			if($change_middle == 0 && $ID_prefix eq "") {$id = $rs."_A";}
+    			if($change_middle == 1 && $ID_prefix ne "") {$id = $rs."_B_".$ID_prefix;}
+    			if($change_middle == 1 && $ID_prefix eq "") {$id = $rs."_B";}
     			}
     		
     		my $list_ofAlts="-";
