@@ -10,7 +10,7 @@ use Getopt::Std;
 sub reverse_complement_IUPAC;
 
 my %options=();
-getopts('R:W:', \%options);
+getopts('RW:', \%options);
 
 #####
 #
@@ -74,12 +74,38 @@ my $rev_truncated;
 
 my %match_ct;
 my $search_id;
+my $search_seq;
 my %delete;
 
-while (($id,$seq) = each %by_id) #need each loop to allow updated deletion of keys
+my @fwd_id;
+my @rc_id;
+my @id_list;
+
+my $rc_txt = "RC"; #text denoting reverse complement
+
+foreach $id (keys %by_id)
+	{
+	if($id =~ m/$rc_txt/)
+		{
+		push(@rc_id,$id);
+		}
+	else
+		{
+		push(@fwd_id,$id);
+		}
+	}
+
+@id_list=(@fwd_id,@rc_id);
+@id_list = sort { length $a <=> length $b } @id_list;
+
+foreach $id (@id_list) #walk through IDs sorted for fwd strand so RCs are collapsed.
 {
+	$match_ct{$id}=0;
 	
-	next if(exists($delete{$id}));	
+	if(exists($delete{$id}))
+	{
+	next;
+	}
 	
 	$truncated = substr($by_id{$id}, $wiggle, -$wiggle) if($wiggle > 0);
 	$truncated = $by_id{$id} if($wiggle == 0);
@@ -87,19 +113,20 @@ while (($id,$seq) = each %by_id) #need each loop to allow updated deletion of ke
 	
 	$rev_truncated  = reverse_complement_IUPAC($truncated);
 	
-	foreach $search_id (keys(%by_id))
+	$truncated=uc($truncated);
+	foreach $search_id (keys %by_id)
 	{
-		if($by_id{$search_id} =~ m/$truncated/)
+		if(uc($by_id{$search_id}) =~ m/$truncated/)
 		{
 		$match_ct{$id}++;
 		push(@{$multi_id{$id}},$search_id) unless($search_id eq $id);
-		$delete{$search_id}=1;
+		$delete{$search_id}=1 unless($search_id eq $id);
 		}
-		elsif($by_id{$search_id} =~ m/$rev_truncated/)
+		elsif(uc($by_id{$search_id}) =~ m/$rev_truncated/ && $collapse_flag == 1)
 		{
 		$match_ct{$id}++;
 		push(@{$multi_id_rc{$id}},$search_id) unless($search_id eq $id);
-		$delete{$search_id}=1;
+		$delete{$search_id}=1 unless($search_id eq $id);
 		}
 	}
 	die "No matches.... it should have matched itself!\n$id\n" if ($match_ct{$id} eq 0);
@@ -108,16 +135,9 @@ while (($id,$seq) = each %by_id) #need each loop to allow updated deletion of ke
 
 foreach $id (keys %delete)
 	{
-	print STDERR "$id\n";
+	#print STDERR "$id\n";
 	delete $by_id{$id};	
 	}
-
-
-
-
-
-
-
 
 
 my $new_ID;
@@ -125,11 +145,13 @@ my $new_ID;
 open (FASTA, ">$OUTFILE.fa") or die("ERROR: can not create $OUTFILE.fa: $!\n");
 open (KEYFILE, ">$OUTFILE.key") or die("ERROR: can not create $OUTFILE.key: $!\n");
 
+@id_list = sort { $a cmp $b } (keys %by_id);
 
-foreach $id (keys %by_id)
+foreach $id (@id_list)
 	{
 	
 	$new_ID = "(".$id;
+	
 	if(exists($multi_id{$id}))
 		{
 		$new_ID = ":".join(":", @{$multi_id{$id}});
@@ -139,7 +161,7 @@ foreach $id (keys %by_id)
 	
 	if(exists($multi_id_rc{$id}))
 		{
-		$new_ID = $new_ID."[".join(":", @{$multi_id{$id}})."]";
+		$new_ID = $new_ID."[".join(":", @{$multi_id_rc{$id}})."]";
 		}
 			
 	if(exists($multi_id_rc{$id}) || exists($multi_id{$id}))
