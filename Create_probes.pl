@@ -54,7 +54,7 @@ my %end_pos;
 my %chr;
 my %pos_strand;
 my %neg_strand;
-
+my $tmp_base;
 
 
 #######################
@@ -64,13 +64,14 @@ my %neg_strand;
 open (ALLELES, $ALLELES) or die "couldn't open $ALLELES\n";
 while (<ALLELES>)
 {
-	next if($_ =~ m/^#/ || $_ =~ m/^Chr/ || $_ =~ m/^chr/);
+	next if($_ =~ m/^#/ || $_ =~ m/^Chr/ || $_ =~ m/^chr/ || $_ =~ m/^CHR/);
     $_ =~ s/[\n\r]//g;
     @inline = split(/\t/);
     print STDERR "Skipping $inline[2] for being too large - ".length($inline[3])." - ".length($inline[4])."\n"  if($max_indel <= length($inline[3]) || $max_indel <= length($inline[4]));
     next if($max_indel <= length($inline[3]) || $max_indel <= length($inline[4]));
     $allele_A{$inline[0]}{$inline[2]}=$inline[3];
     $allele_B{$inline[0]}{$inline[2]}=$inline[4];
+    die "ERROR: SNP IDs must be unique, duplicate found: $inline[2]\n" if(exists $pos{$inline[2]});
 	$pos{$inline[2]} = $inline[1];
 	$end_pos{$inline[2]} = $inline[1]+length($inline[3])-1;
 	$chr{$inline[2]} = $inline[0];
@@ -110,9 +111,10 @@ while ( my $seq = $in->next_seq() )
     			 $allele_A{$chr}{$rs}=$allele_B{$inline[0]}{$rs};
     			 $allele_B{$chr}{$rs}=$tmp_value;
 				 $end_pos{$rs} = $pos{$rs}+length($allele_A{$chr}{$rs})-1;
-				 print STDERR "Flipped alleles for $rs: $allele_B{$chr}{$rs} -> $allele_A{$chr}{$rs}\n";
+				 print STDERR "Flipped alleles for $chr,$pos{$rs},$rs: $allele_B{$chr}{$rs} -> $allele_A{$chr}{$rs}\n";
     			}
-			die "Non matching alleles\n$rs\t$seq->subseq($pos{$rs},$end_pos{$rs})\t$allele_A{$chr}{$rs} " if($seq->subseq($pos{$rs},$end_pos{$rs}) ne $allele_A{$chr}{$rs});
+    		$tmp_base=$seq->subseq($pos{$rs},$end_pos{$rs});
+			print STDERR  "Non matching alleles\n$chr,$pos{$rs},$tmp_base\t$allele_A{$chr}{$rs}\n" if($seq->subseq($pos{$rs},$end_pos{$rs}) ne $allele_A{$chr}{$rs});
 	}
 }
 
