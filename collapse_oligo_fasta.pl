@@ -170,7 +170,7 @@ foreach $id (@id_list)
 		print FASTA $by_id{$id}."\n";
 		
 		if(exists($multi_id_rc{$id}) && exists($multi_id{$id}))
-			{print KEYFILE $id."\t".join(";", @{$multi_id{$id}})."\t".join(",", @{$multi_id_rc{$id}})."\n";}
+			{print KEYFILE $id."\t".join(";", @{$multi_id{$id}})."\t".join(";", @{$multi_id_rc{$id}})."\n";}
 		elsif(exists($multi_id_rc{$id}))
 			{print KEYFILE $id."\t-\t".join(";", @{$multi_id_rc{$id}})."\n";}
 		elsif(exists($multi_id{$id}))
