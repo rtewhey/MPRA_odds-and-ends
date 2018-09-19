@@ -154,7 +154,7 @@ foreach $id (@id_list)
 	
 	if(exists($multi_id{$id}))
 		{
-		$new_ID = $new_ID.",".join(";", @{$multi_id{$id}});
+		$new_ID = $new_ID.";".join(";", @{$multi_id{$id}});
 		}
 	
 	$new_ID = $new_ID.")";
