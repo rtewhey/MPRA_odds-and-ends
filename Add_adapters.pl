@@ -95,7 +95,7 @@ while (<ALLELES>)
 	$t_ct = uc($tmp_seq) =~ tr/T//;
 	$gc	= sprintf("%.1f",100*(($c_ct+$g_ct)/($a_ct+$c_ct+$g_ct+$t_ct)));	
 				
-	print join("\t",$inline[0],"NA","NA","NA",$gc,length($inline[1]),length($oligo),uc($oligo))."\n";
+	print join("\t",$inline[0],"NA","NA","NA",$gc,length($inline[1]),length($oligo),uc($oligo),$inline[1])."\n";
 	#print join("\t",$inline[0]."_rc",$inline[1],$inline[2],$inline[3],$inline[4],$inline[5],length($oligo_rc),$oligo_rc)."\n";	
 }
 close ALLELES;
@@ -130,7 +130,7 @@ while (<ALLELES>)
 			$oligo=substr($l_pad,-$left_add).$oligo.substr($r_pad,0,$right_add);	
 			}
 		}
-	print join("\t",$inline[0],$inline[1],$inline[2],$inline[3],$inline[4],$inline[5],length($oligo),$oligo)."\n";
+	print join("\t",$inline[0],$inline[1],$inline[2],$inline[3],$inline[4],$inline[5],length($oligo),$oligo,$inline[13])."\n";
 	#print join("\t",$inline[0]."_rc",$inline[1],$inline[2],$inline[3],$inline[4],$inline[5],length($oligo_rc),$oligo_rc)."\n";	
 }
 close ALLELES;

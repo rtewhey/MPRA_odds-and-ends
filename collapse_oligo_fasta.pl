@@ -14,7 +14,7 @@ getopts('RW:', \%options);
 
 #####
 #
-#-R = Collapse reverse complement sequence
+#-R = Collapse reverse complement sequence  (Default no collapse)
 #-W = Wiggle room for sequence match
 #
 #####
