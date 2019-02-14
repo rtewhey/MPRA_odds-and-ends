@@ -16,6 +16,7 @@ my $ALLELES = $ARGV[0];
 my $search = "GCGATCGC";
 my $replace = "GCGATTGC";
 
+my $adapter_l = "CACTGCGGCTCCT";
 
 #######################
 ###Load Allele File
@@ -38,10 +39,10 @@ while (<ALLELES>)
     @inline = split(/\t/);
    	#if ($inline[13] =~ /$search/)
 	
-	if ($inline[7] =~ /$search/)
+	if ($inline[7] =~ /(?<!$adapter_l)$search/)
 	{
 		$count = 0;
-		$count++ while $inline[7] =~ /$search/g;
+		$count++ while $inline[7] =~ /(?<!$adapter_l)$search/g;
 		print STDERR "Adjusted $inline[0] - $count hits\n";
 		
 		$length = length($inline[7]);
@@ -60,7 +61,9 @@ while (<ALLELES>)
 				print STDERR "WARNING: Restriction site appears to fall over middle of oligo! - $inline[0]\n";
 				}
 			}
-		$inline[7] =~ s/$search/$replace/g;
+		$inline[7] =~ s/(?<!$adapter_l)$search/$replace/g;
+		$inline[8] =~ s/(?<!$adapter_l)$search/$replace/g;
+
 	}
 	
 print join("\t",@inline)."\n";			
