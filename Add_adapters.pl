@@ -62,7 +62,7 @@ open (ALLELES, $ALLELES) or die "couldn't open $ALLELES\n";
 while (<ALLELES>)
 {
     $_ =~ s/[\n\r]//g;
-    @inline = split(/\t/);
+    @inline = split(/\s+/);
 	$length = length($inline[1]);
 	$oligo = $l_adapter.$inline[1].$r_adapter;
 	

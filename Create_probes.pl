@@ -172,9 +172,10 @@ foreach $chr (keys %allele_A)
 					}
 				}
 			}
-		#Code to toss overlapping combinations followed by subtraction of the counter by one because the array in now one element shorter.
-		splice(@{$combinations{$rs}},$i,1) if($overlap_snp > 0);
-		$i-- if($overlap_snp > 0)
+		#Code to toss overlapping combinations followed by subtraction of the counter by one because the array is now one element shorter.
+ #       print join("\t","Alt Config with overlapping SNPS (tossed): ",join(",",@{$combinations{$rs}}[$i])) if($overlap_snp > 0);		
+        splice(@{$combinations{$rs}},$i,1) if($overlap_snp > 0);
+		$i-- if($overlap_snp > 0);
 		}
 	}
 }
@@ -385,18 +386,21 @@ sub introduceMutations {
     my @snps_toAdd;
     my @inserts_toAdd;
     my @deletions_toAdd;
+    my @MNV_toAdd;
     
     foreach $rs (@snps)
     	{
     		push(@snps_toAdd, $rs) if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) == 1 && length($allele_B{$chr}{$rs}) == 1);  
     		push(@inserts_toAdd, $rs) if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) == 1 && length($allele_B{$chr}{$rs}) > 1);    		    	
     		push(@deletions_toAdd, $rs) if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) > 1 && length($allele_B{$chr}{$rs}) == 1);    		    	
-  		    print STDERR "MNV deletion - spotcheck $rs\n" if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) > 1 && length($allele_B{$chr}{$rs}) > 1 && length($allele_A{$chr}{$rs}) > length($allele_B{$chr}{$rs}));
-  		  	print STDERR "MNV insertion - spotcheck $rs\n" if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) > 1 && length($allele_B{$chr}{$rs}) > 1 && length($allele_A{$chr}{$rs}) < length($allele_B{$chr}{$rs}));
+  		    print STDERR "MNV deletion - spotcheck $rs - $chr:$start-$stop\n\t".join(",",@snps)."\n" if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) > 1 && length($allele_B{$chr}{$rs}) > 1 && length($allele_A{$chr}{$rs}) > length($allele_B{$chr}{$rs}));
+  		  	print STDERR "MNV insertion - spotcheck $rs - $chr:$start-$stop\n\t".join(",",@snps)."\n" if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) > 1 && length($allele_B{$chr}{$rs}) > 1 && length($allele_A{$chr}{$rs}) < length($allele_B{$chr}{$rs}));
    		    push(@deletions_toAdd, $rs) if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) > 1 && length($allele_B{$chr}{$rs}) > 1 && length($allele_A{$chr}{$rs}) > length($allele_B{$chr}{$rs}));
   		  	push(@inserts_toAdd, $rs) if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) > 1 && length($allele_B{$chr}{$rs}) > 1 && length($allele_A{$chr}{$rs}) < length($allele_B{$chr}{$rs}));
-  		    die "Equal length MNVs have not been implemented: $rs\n" if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) > 1 && length($allele_B{$chr}{$rs}) > 1 && length($allele_A{$chr}{$rs}) == length($allele_B{$chr}{$rs}));
+  		    print STDERR "Equal Length MNV insertion - spotcheck $rs - $chr:$start-$stop\n\t".join(",",@snps)."\n" if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) > 1 && length($allele_B{$chr}{$rs}) > 1 && length($allele_A{$chr}{$rs}) == length($allele_B{$chr}{$rs}));
+            push(@MNV_toAdd, $rs) if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && length($allele_A{$chr}{$rs}) > 1 && length($allele_B{$chr}{$rs}) > 1 && length($allele_A{$chr}{$rs}) == length($allele_B{$chr}{$rs}));
   		    die "One of the alleles is empty?: $rs\n" if($pos{$rs} >= $start && $end_pos{$rs} <= $stop && (length($allele_A{$chr}{$rs}) < 1 || length($allele_B{$chr}{$rs}) < 1))	
+
     	}
     
     my @SeqBases = split(//,$seq);
@@ -430,6 +434,18 @@ sub introduceMutations {
 			$SeqBases[$pos{$rs}-$start] = $allele_B{$chr}{$rs};
 			###Does not account for when SNP is at the -1 position. Coded so that I can easily fix this in the future.	
 		}
+    foreach $rs (@MNV_toAdd)
+        {
+        $tmp_seq="";
+            for($i=$pos{$rs};$i<=$end_pos{$rs};$i++)
+                {
+                $tmp_seq=$tmp_seq.$SeqBases[$i-$start];
+                $SeqBases[$i-$start]="";
+                }
+            die "does not match: $rs\n" if($allele_A{$chr}{$rs} ne $tmp_seq);
+            $SeqBases[$pos{$rs}-$start] = $allele_B{$chr}{$rs};
+            ###Does not account for when SNP is at the -1 position. Coded so that I can easily fix this in the future.  
+        }
 
 	$tmp_seq=join("",@SeqBases);
 	return($tmp_seq);
