@@ -141,9 +141,11 @@ foreach $id (keys %delete)
 
 
 my $new_ID;
+my $tmp_id;
 
 open (FASTA, ">$OUTFILE.fa") or die("ERROR: can not create $OUTFILE.fa: $!\n");
 open (KEYFILE, ">$OUTFILE.key") or die("ERROR: can not create $OUTFILE.key: $!\n");
+open (KEYFILE_FULL, ">$OUTFILE.fullkey") or die("ERROR: can not create $OUTFILE.key: $!\n");
 
 @id_list = sort { $a cmp $b } (keys %by_id);
 
@@ -170,11 +172,32 @@ foreach $id (@id_list)
 		print FASTA $by_id{$id}."\n";
 		
 		if(exists($multi_id_rc{$id}) && exists($multi_id{$id}))
-			{print KEYFILE $id."\t".join(";", @{$multi_id{$id}})."\t".join(";", @{$multi_id_rc{$id}})."\n";}
+			{
+			print KEYFILE $id."\t".join(";", @{$multi_id{$id}})."\t".join(";", @{$multi_id_rc{$id}})."\n";
+			print KEYFILE_FULL $id."\t".$new_ID."\n";
+			foreach $tmp_id (@{$multi_id{$id}})
+				{
+				print KEYFILE_FULL $tmp_id."\t".$new_ID."\n";
+				}
+			}
 		elsif(exists($multi_id_rc{$id}))
-			{print KEYFILE $id."\t-\t".join(";", @{$multi_id_rc{$id}})."\n";}
+			{
+			print KEYFILE $id."\t-\t".join(";", @{$multi_id_rc{$id}})."\n";
+			print KEYFILE_FULL $id."\t".$new_ID."\n";
+			foreach $tmp_id (@{$multi_id_rc{$id}})
+				{
+				print KEYFILE_FULL $tmp_id."\t".$new_ID."\n";
+				}
+			}
 		elsif(exists($multi_id{$id}))
-			{print KEYFILE $id."\t".join(";", @{$multi_id{$id}})."\t-\n";}
+			{
+			print KEYFILE $id."\t".join(";", @{$multi_id{$id}})."\t-\n";
+			print KEYFILE_FULL $id."\t".$new_ID."\n";
+			foreach $tmp_id (@{$multi_id{$id}})
+				{
+				print KEYFILE_FULL $tmp_id."\t".$new_ID."\n";
+				}		
+			}
 
 		}
 	else
