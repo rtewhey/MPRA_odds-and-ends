@@ -74,7 +74,6 @@ while (<ALLELES>)
 	next if($_ =~ m/^#/ || $_ =~ m/^Chr/ || $_ =~ m/^chr/ || $_ =~ m/^CHR/);
     $_ =~ s/[\n\r]//g;
     @inline = split(/\t/);
-    $inline[0] =~ s/^chr//g;
     print STDERR "Skipping $inline[2] for being too large - ".length($inline[3])." - ".length($inline[4])."\n"  if($max_indel <= length($inline[3]) || $max_indel <= length($inline[4]));
     next if($max_indel <= length($inline[3]) || $max_indel <= length($inline[4]));
     $allele_A{$inline[0]}{$inline[2]}=$inline[3];
@@ -87,9 +86,7 @@ while (<ALLELES>)
 	$neg_strand{$inline[2]} = 0 unless(exists($neg_strand{$inline[2]}));
 	$pos_strand{$inline[2]} = 1 if($inline[5] eq "+");
 	$neg_strand{$inline[2]} = 1 if($inline[5] eq "-");
-	
-	print STDERR "$chr{$inline[2]}\t$inline[2]\t$inline[0]\n";
-}
+	}
 close ALLELES;
 
 #######################
