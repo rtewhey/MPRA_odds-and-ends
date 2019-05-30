@@ -17,7 +17,7 @@ sub checkOligoOverlap;
 sub checkSNPOverlap;
 
 my %options=();
-getopts('L:R:O:P:', \%options);
+getopts('L:R:O:P:CH', \%options);
 
 #####
 #
@@ -25,11 +25,18 @@ getopts('L:R:O:P:', \%options);
 #-R = Length of right arm
 #-O = Total oligo length
 #-P = Prefix to attach to ID
-#
+#-C = new seq ID used for Encode (chr:pos:ref:alt:[R|A]:window:metaInfo)
+#-H = If 1 skip haplotypes (default is 0)
 #####
 if(exists($options{L}) && exists($options{R})){die "Set length to equal left and right (-O)\n" unless($options{O}==($options{L}+$options{R}));}
 
 my $ID_prefix = $options{P} || "";
+my $c_flag = $options{C} || 0;
+my $h_flag = $options{H} || 0;
+
+print STDERR "Using chr:pos:ref:alt:[R|A]:window:metaInfo naming\n" if($c_flag == 1);
+print STDERR "Skipping haplotype building\n" if($h_flag == 1);
+
 
 my $REF = $ARGV[0];
 my $ALLELES = $ARGV[1];
@@ -67,6 +74,7 @@ while (<ALLELES>)
 	next if($_ =~ m/^#/ || $_ =~ m/^Chr/ || $_ =~ m/^chr/ || $_ =~ m/^CHR/);
     $_ =~ s/[\n\r]//g;
     @inline = split(/\t/);
+    $inline[0] =~ s/^chr//g;
     print STDERR "Skipping $inline[2] for being too large - ".length($inline[3])." - ".length($inline[4])."\n"  if($max_indel <= length($inline[3]) || $max_indel <= length($inline[4]));
     next if($max_indel <= length($inline[3]) || $max_indel <= length($inline[4]));
     $allele_A{$inline[0]}{$inline[2]}=$inline[3];
@@ -79,6 +87,8 @@ while (<ALLELES>)
 	$neg_strand{$inline[2]} = 0 unless(exists($neg_strand{$inline[2]}));
 	$pos_strand{$inline[2]} = 1 if($inline[5] eq "+");
 	$neg_strand{$inline[2]} = 1 if($inline[5] eq "-");
+	
+	print STDERR "$chr{$inline[2]}\t$inline[2]\t$inline[0]\n";
 }
 close ALLELES;
 
@@ -108,10 +118,11 @@ while ( my $seq = $in->next_seq() )
     		elsif($allele_A{$chr}{$rs} ne $seq->subseq($pos{$rs},$end_pos{$rs}))
     			{
    				 $tmp_value=$allele_A{$chr}{$rs};
-    			 $allele_A{$chr}{$rs}=$allele_B{$inline[0]}{$rs};
+    			 $allele_A{$chr}{$rs}=$allele_B{$chr}{$rs};
     			 $allele_B{$chr}{$rs}=$tmp_value;
 				 $end_pos{$rs} = $pos{$rs}+length($allele_A{$chr}{$rs})-1;
-				 print STDERR "Flipped alleles for $chr,$pos{$rs},$rs: $allele_B{$chr}{$rs} -> $allele_A{$chr}{$rs}\n";
+				 $tmp_base=$seq->subseq($pos{$rs},$end_pos{$rs});
+				 print STDERR "Flipped alleles for $chr,$pos{$rs},$rs: $allele_B{$chr}{$rs} -> $allele_A{$chr}{$rs} | REF $tmp_base\n";
     			}
     		$tmp_base=$seq->subseq($pos{$rs},$end_pos{$rs});
 			print STDERR  "Non matching alleles\n$chr,$pos{$rs},$tmp_base\t$allele_A{$chr}{$rs}\n" if($seq->subseq($pos{$rs},$end_pos{$rs}) ne $allele_A{$chr}{$rs});
@@ -145,40 +156,45 @@ foreach $chr (keys %allele_A)
 		@{$adjacent{$rs}} = ();
 		push(@{$adjacent{$rs}}, $rs);
 		$adjacent_ct{$rs} = 1;
-		foreach $rs_2 (keys %{$allele_A{$chr}})
+		
+		if($h_flag != 1)  #Skip looking for pairs if flag is set to 1
 		{
-		#Find SNPs that overlap on the oligo but do not overlap with the centered SNP
-		$overlap_oligo = checkOligoOverlap($rs, $rs_2);
-		$overlap_snp = checkSNPOverlap($rs, $rs_2);		
-		push(@{$adjacent{$rs}}, $rs_2) if($overlap_oligo == 1 && $overlap_snp == 0);
-		$adjacent_ct{$rs}++ if($overlap_oligo == 1);	
-		}
-
-	#Find all combinations of SNPs. Subroutine will produce one empty array that is signifies centered allele A.
-	push(@{$combinations{$rs}},[@$_]) for combinations(@{$adjacent{$rs}});
-
-	#Walk through all the combinations and make sure none of the adjacent SNPs overlap each other. It they do toss that combination.
-	for($i=0;$i<scalar(@{$combinations{$rs}});$i++)
-		{
-		#print join("-",$tmp2)."\n";
-		$overlap_snp=0;
-		if(scalar(@{$combinations{$rs}[$i]}) > 1)
+			foreach $rs_2 (keys %{$allele_A{$chr}})
 			{
-			foreach $rs_2 (@{$combinations{$rs}[$i]})
+			#Find SNPs that overlap on the oligo but do not overlap with the centered SNP
+			$overlap_oligo = checkOligoOverlap($rs, $rs_2);
+			$overlap_snp = checkSNPOverlap($rs, $rs_2);		
+			push(@{$adjacent{$rs}}, $rs_2) if($overlap_oligo == 1 && $overlap_snp == 0);
+			$adjacent_ct{$rs}++ if($overlap_oligo == 1);	
+			}
+		}
+		
+		#Find all combinations of SNPs. Subroutine will produce one empty array that is signifies centered allele A.
+		push(@{$combinations{$rs}},[@$_]) for combinations(@{$adjacent{$rs}});
+
+		#Walk through all the combinations and make sure none of the adjacent SNPs overlap each other. It they do toss that combination.
+		for($i=0;$i<scalar(@{$combinations{$rs}});$i++)
+			{
+			#print join("-",$tmp2)."\n";
+			$overlap_snp=0;
+			if(scalar(@{$combinations{$rs}[$i]}) > 1)
 				{
-				foreach $rs_3 (@{$combinations{$rs}[$i]})
+				foreach $rs_2 (@{$combinations{$rs}[$i]})
 					{
-					$overlap_snp++ if(checkSNPOverlap($rs_2, $rs_3) ==  1);
+					foreach $rs_3 (@{$combinations{$rs}[$i]})
+						{
+						$overlap_snp++ if(checkSNPOverlap($rs_2, $rs_3) ==  1);
+						}
 					}
 				}
-			}
-		#Code to toss overlapping combinations followed by subtraction of the counter by one because the array is now one element shorter.
- #       print join("\t","Alt Config with overlapping SNPS (tossed): ",join(",",@{$combinations{$rs}}[$i])) if($overlap_snp > 0);		
-        splice(@{$combinations{$rs}},$i,1) if($overlap_snp > 0);
-		$i-- if($overlap_snp > 0);
-		}
+			#Code to toss overlapping combinations followed by subtraction of the counter by one because the array is now one element shorter.
+ 			#print join("\t","Alt Config with overlapping SNPS (tossed): ",join(",",@{$combinations{$rs}}[$i])) if($overlap_snp > 0);		
+        	splice(@{$combinations{$rs}},$i,1) if($overlap_snp > 0);
+			$i-- if($overlap_snp > 0);
+			}	
 	}
 }
+print STDERR "DONE\n";
 
 my %tmp_ct;
 my %tmp_ct2;
@@ -322,6 +338,11 @@ while ( my $seq = $in->next_seq() )
     			if($change_middle == 0 && $ID_prefix eq "") {$id = $rs."_A_alt-".$combo_id_ct;}
     			if($change_middle == 1 && $ID_prefix ne "") {$id = $rs."_B_alt-".$combo_id_ct."_".$ID_prefix;}
     			if($change_middle == 1 && $ID_prefix eq "")  {$id = $rs."_B_alt-".$combo_id_ct;}
+    			
+    			if($change_middle == 0 && $ID_prefix ne "" && $c_flag == 1) {$id = $rs.":R:".$ID_prefix.":alt-".$combo_id_ct;} 
+    			if($change_middle == 0 && $ID_prefix eq "" && $c_flag == 1) {$id = $rs.":R:NA:alt-".$combo_id_ct;}
+    			if($change_middle == 1 && $ID_prefix ne "" && $c_flag == 1) {$id = $rs.":A:".$ID_prefix.":alt-".$combo_id_ct;}
+    			if($change_middle == 1 && $ID_prefix eq "" && $c_flag == 1)  {$id = $rs.":A:NA:alt-".$combo_id_ct;}
     			}
     		else
     			{
@@ -329,6 +350,11 @@ while ( my $seq = $in->next_seq() )
     			if($change_middle == 0 && $ID_prefix eq "") {$id = $rs."_A";}
     			if($change_middle == 1 && $ID_prefix ne "") {$id = $rs."_B_".$ID_prefix;}
     			if($change_middle == 1 && $ID_prefix eq "") {$id = $rs."_B";}
+    			
+    			if($change_middle == 0 && $ID_prefix ne "" && $c_flag == 1) {$id = $rs.":R:".$ID_prefix;} 
+    			if($change_middle == 0 && $ID_prefix eq "" && $c_flag == 1) {$id = $rs.":R:";}
+    			if($change_middle == 1 && $ID_prefix ne "" && $c_flag == 1) {$id = $rs.":A:".$ID_prefix;}
+    			if($change_middle == 1 && $ID_prefix eq "" && $c_flag == 1) {$id = $rs.":A:";}
     			}
     		
     		my $list_ofAlts="-";
