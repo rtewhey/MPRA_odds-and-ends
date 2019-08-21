@@ -97,10 +97,14 @@ foreach $id (keys %by_id)
 
 @id_list=(@fwd_id,@rc_id);
 @id_list = sort { length $a <=> length $b } @id_list;
+my $ct=0;
 
 foreach $id (@id_list) #walk through IDs sorted for fwd strand so RCs are collapsed.
 {
 	$match_ct{$id}=0;
+	
+	$ct++;
+	print STDERR "\r$ct";
 	
 	if(exists($delete{$id}))
 	{
