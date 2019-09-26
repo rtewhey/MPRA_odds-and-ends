@@ -12,7 +12,7 @@ use Getopt::Std;
 
 
 my %options=();
-getopts('B', \%options);
+getopts('BL:', \%options);
 
 #####
 #
@@ -25,7 +25,7 @@ my $ALLELES = $ARGV[0];
 
 #######
 ## Global parameters
-my $oligo_length = 230; #Length of cloned enhancer region 
+my $oligo_length = $options{L} || 230; #Length of Oligo
 
 my $l_adapter = "ACTGGCCGCTTGACG";
 my $l_pad = "GTACGGGAGGTATTGGACAGGCCGCAATAAAATATCTTTATTTTCATTACATCTGTGTGTTGGTTTTTTGTGTGAATCGATAGTACTAACATACGCTCTCCATCAAAACAAAACGAAACAAAACAAACTAGCAAAATAGGCTGTCCCCAGTGCAAGTGCAGGTGCCAGAACATTTCTCTGGCCTA";
