@@ -17,7 +17,7 @@ getopts('BL:', \%options);
 #####
 #
 #-B = Use flag -B if BASH format (ID Oligo)
-#
+#-L = Oligo length
 #####
 
 
