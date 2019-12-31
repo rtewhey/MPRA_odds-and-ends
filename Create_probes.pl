@@ -430,7 +430,7 @@ sub introduceMutations {
     
     foreach $rs (@snps_toAdd)
     	{
-    	die "does not match: $rs\n" if($allele_A{$chr}{$rs} ne $SeqBases[$pos{$rs}-$start]);
+    	die "does not match: $rs $allele_A{$chr}{$rs} $SeqBases[$pos{$rs}-$start \n" if($allele_A{$chr}{$rs} ne $SeqBases[$pos{$rs}-$start]);
     	$SeqBases[$pos{$rs}-$start] = $allele_B{$chr}{$rs};
     	}
     my $tmp_seq="";
@@ -442,7 +442,7 @@ sub introduceMutations {
     			$tmp_seq=$tmp_seq.$SeqBases[$i-$start];
     			$SeqBases[$i-$start]="";
     			}
-    	die "does not match: $rs\n" if($allele_A{$chr}{$rs} ne $tmp_seq);
+    	die "does not match: $rs $allele_A{$chr}{$rs} $tmp_seq\n" if($allele_A{$chr}{$rs} ne $tmp_seq);
     	$SeqBases[$pos{$rs}-$start] = $allele_B{$chr}{$rs};
     	}
 	foreach $rs (@inserts_toAdd)
@@ -453,7 +453,7 @@ sub introduceMutations {
     			$tmp_seq=$tmp_seq.$SeqBases[$i-$start];
     			$SeqBases[$i-$start]="";
     			}
-			die "does not match: $rs\n" if($allele_A{$chr}{$rs} ne $tmp_seq);
+			die "does not match: $rs $allele_A{$chr}{$rs} $tmp_seq\n" if($allele_A{$chr}{$rs} ne $tmp_seq);
 			$SeqBases[$pos{$rs}-$start] = $allele_B{$chr}{$rs};
 			###Does not account for when SNP is at the -1 position. Coded so that I can easily fix this in the future.	
 		}
@@ -465,7 +465,7 @@ sub introduceMutations {
                 $tmp_seq=$tmp_seq.$SeqBases[$i-$start];
                 $SeqBases[$i-$start]="";
                 }
-            die "does not match: $rs\n" if($allele_A{$chr}{$rs} ne $tmp_seq);
+            die "does not match: $rs $allele_A{$chr}{$rs} $tmp_seq\n" if($allele_A{$chr}{$rs} ne $tmp_seq);
             $SeqBases[$pos{$rs}-$start] = $allele_B{$chr}{$rs};
             ###Does not account for when SNP is at the -1 position. Coded so that I can easily fix this in the future.  
         }
