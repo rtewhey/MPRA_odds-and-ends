@@ -430,7 +430,7 @@ sub introduceMutations {
     
     foreach $rs (@snps_toAdd)
     	{
-    	die "does not match: $rs $allele_A{$chr}{$rs} $SeqBases[$pos{$rs}-$start \n" if($allele_A{$chr}{$rs} ne $SeqBases[$pos{$rs}-$start]);
+    	die "does not match: $rs $allele_A{$chr}{$rs} $SeqBases[$pos{$rs}-$start] \n" if($allele_A{$chr}{$rs} ne $SeqBases[$pos{$rs}-$start]);
     	$SeqBases[$pos{$rs}-$start] = $allele_B{$chr}{$rs};
     	}
     my $tmp_seq="";
