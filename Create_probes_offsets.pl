@@ -92,7 +92,7 @@ while (<ALLELES>)
 	
     $internal_ID=$inline[2].":wP".$left_length;
     $SNPID{$internal_ID}=$inline[2];
-    $OFFSET_ID{$internal_ID}=":wP".$left_length;
+    $OFFSET_ID{$internal_ID}="wP".$left_length;
     print STDERR "Skipping $inline[2] for being too large - ".length($inline[3])." - ".length($inline[4])."\n"  if($max_indel <= length($inline[3]) || $max_indel <= length($inline[4]));
     next if($max_indel <= length($inline[3]) || $max_indel <= length($inline[4]));
     $allele_A{$inline[0]}{$internal_ID}=$inline[3];
