@@ -71,7 +71,7 @@ my %chr_rs;
 my %pos_strand;
 my %neg_strand;
 my $tmp_base;
-my $OFFSET_ID;
+my %OFFSET_ID;
 
 my %var_left_length;
 my %var_right_length;
