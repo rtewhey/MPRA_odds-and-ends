@@ -345,6 +345,7 @@ while ( my $seq = $in->next_seq() )
 			$alleleToPrint=$allele_B{$chr}{$rs} if($change_middle == 1);
     		
     		my $id = "";
+    		my $ID_prefix="wLoffset-".$var_left_length{$rs} if($f_flag == 1);
     		if(scalar(@flanking_rs) >= 1)
     			{
     			#If there are flanking SNPs first see if that combination has been designed with alt middle allele. If true take the prior alt ID count. If it's the first time seen assign a unique id and log it.
