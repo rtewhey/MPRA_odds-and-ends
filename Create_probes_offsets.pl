@@ -71,6 +71,7 @@ my %chr_rs;
 my %pos_strand;
 my %neg_strand;
 my $tmp_base;
+my $OFFSET_ID;
 
 my %var_left_length;
 my %var_right_length;
@@ -91,6 +92,7 @@ while (<ALLELES>)
 	
     $internal_ID=$inline[2].":wP".$left_length;
     $SNPID{$internal_ID}=$inline[2];
+    $OFFSET_ID{$internal_ID}=":wP".$left_length;
     print STDERR "Skipping $inline[2] for being too large - ".length($inline[3])." - ".length($inline[4])."\n"  if($max_indel <= length($inline[3]) || $max_indel <= length($inline[4]));
     next if($max_indel <= length($inline[3]) || $max_indel <= length($inline[4]));
     $allele_A{$inline[0]}{$internal_ID}=$inline[3];
@@ -345,7 +347,6 @@ while ( my $seq = $in->next_seq() )
 			$alleleToPrint=$allele_B{$chr}{$rs} if($change_middle == 1);
     		
     		my $id = "";
-    		my $ID_prefix="wLoffset-".$var_left_length{$rs} if($f_flag == 1);
     		if(scalar(@flanking_rs) >= 1)
     			{
     			#If there are flanking SNPs first see if that combination has been designed with alt middle allele. If true take the prior alt ID count. If it's the first time seen assign a unique id and log it.
@@ -381,6 +382,11 @@ while ( my $seq = $in->next_seq() )
     			if($change_middle == 0 && $ID_prefix eq "" && $c_flag == 1) {$id = $rs.":R:";}
     			if($change_middle == 1 && $ID_prefix ne "" && $c_flag == 1) {$id = $rs.":A:".$ID_prefix;}
     			if($change_middle == 1 && $ID_prefix eq "" && $c_flag == 1) {$id = $rs.":A:";}
+				if($change_middle == 0 && $ID_prefix ne "" && $c_flag == 1 && $f_flag == 1) {$id = $SNPID{$rs}.":R:".$OFFSET_ID{$rs}.":".$ID_prefix;} 
+    			if($change_middle == 1 && $ID_prefix ne "" && $c_flag == 1 && $f_flag == 1) {$id = $SNPID{$rs}.":A:".$OFFSET_ID{$rs}.":".$ID_prefix;}
+				if($change_middle == 0 && $ID_prefix eq "" && $c_flag == 1 && $f_flag == 1) {$id = $SNPID{$rs}.":R:".$OFFSET_ID{$rs};} 
+    			if($change_middle == 1 && $ID_prefix eq "" && $c_flag == 1 && $f_flag == 1) {$id = $SNPID{$rs}.":A:".$OFFSET_ID{$rs};}
+
     			}
     		
     		my $list_ofAlts="-";
