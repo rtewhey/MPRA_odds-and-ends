@@ -10,13 +10,15 @@ use Getopt::Std;
 sub reverse_complement_IUPAC;
 
 my %options=();
-getopts('RFW:', \%options);
+getopts('RFW:I:S:', \%options);
 
 #####
 #
 #-R = Collapse reverse complement sequence  (Default no collapse)
 #-W = Wiggle room for sequence match
 #-F = full length match (will not collapse two oligos 200 and 199 even if perfect)
+#-I = Column with ID (default = 1)
+#-S = Column with sequence (default = 14)
 #####
 
 my $collapse_flag;
@@ -41,6 +43,12 @@ if(exists($options{F}))
 	}
 else {$full_length_flag = 0;}
 
+my $ID_col = $options{I} || 1;
+my $SEQ_col = $options{S} || 14;
+
+print STDERR "ID in column $ID_col\nSequencing in column $SEQ_col\n\n";
+
+
 
 my $FILE1 = $ARGV[0]; #fasta List
 my $OUTFILE = $ARGV[1]; #outfile
@@ -62,8 +70,8 @@ while (<FILE1>)
 	{
 	$_ =~ s/[\n\r]//g;
     @inline = split(/\s+/);
-	$id=$inline[0];
-	$seq=$inline[13];
+	$id=$inline[$ID_col-1];
+	$seq=$inline[$SEQ_col-1];
 	@{$line{$id}}=@inline;
 	
 	if(exists $by_id{$id})
@@ -200,8 +208,17 @@ foreach $id (@id_list)
 			
 	if(exists($multi_id_rc{$id}) || exists($multi_id{$id}))
 		{
-		print FASTA join("\t",$new_ID,"multiple",${$line{$id}}[2],${$line{$id}}[3],${$line{$id}}[4],${$line{$id}}[5],${$line{$id}}[6],${$line{$id}}[7],${$line{$id}}[8],${$line{$id}}[9],${$line{$id}}[10],${$line{$id}}[11],${$line{$id}}[12],$by_id{$id},${$line{$id}}[14])."\n";
-		
+		if($SEQ_col==14 && $ID_col==1)
+			{
+			print FASTA join("\t",$new_ID,"multiple",${$line{$id}}[2],${$line{$id}}[3],${$line{$id}}[4],${$line{$id}}[5],${$line{$id}}[6],${$line{$id}}[7],${$line{$id}}[8],${$line{$id}}[9],${$line{$id}}[10],${$line{$id}}[11],${$line{$id}}[12],$by_id{$id},${$line{$id}}[14])."\n";
+			}
+		else
+			{
+			${$line{$id}}[$SEQ_col-1]=$by_id{$id};
+			${$line{$id}}[$ID_col-1]=$new_ID;
+			print FASTA join("\t",@{$line{$id}})."\n";
+			}
+
 		if(exists($multi_id_rc{$id}) && exists($multi_id{$id}))
 			{
 			print KEYFILE $id."\t".join(";", @{$multi_id{$id}})."\t".join(";", @{$multi_id_rc{$id}})."\n";
